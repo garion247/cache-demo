@@ -27,17 +27,16 @@ jobs:
         run: npm ci
 
       - name: Cache build output (invalidates on source change)
+        id: cache-build
         uses: actions/cache@v4
         with:
           path: dist
           key: build-${{ runner.os }}-${{ hashFiles('test.js', 'package.json') }}
-          restore-keys: |
-            build-${{ runner.os }}-
 
       - name: Build
         run: |
           mkdir -p dist
-          if [ -f dist/build.txt ]; then
+          if [ "${{ steps.cache-build.outputs.cache-hit }}" = "true" ]; then
             echo "Build cache hit - skipping rebuild"
           else
             echo "Building..."
