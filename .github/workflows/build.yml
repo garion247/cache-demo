@@ -14,15 +14,22 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Cache node_modules
+      - name: Cache node_modules with fallback
         id: cache-modules
         uses: actions/cache@v4
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            node-modules-${{ runner.os }}-
 
-      - name: Install dependencies (only on cache miss)
-        if: steps.cache-modules.outputs.cache-hit != 'true'
-        run: npm ci
+      - name: Install dependencies
+        run: |
+          if [ "${{ steps.cache-modules.outputs.cache-hit }}" = "true" ]; then
+            echo "Exact cache hit - skipping npm ci"
+          else
+            echo "Partial or no cache - running npm ci to reconcile"
+            npm ci
+          fi
 
       - run: npm test
