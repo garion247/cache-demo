@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Cache node_modules with fallback
+      - name: Cache deps (invalidates on lockfile change)
         id: cache-modules
         uses: actions/cache@v4
         with:
@@ -23,13 +23,25 @@ jobs:
           restore-keys: |
             node-modules-${{ runner.os }}-
 
-      - name: Install dependencies
+      - if: steps.cache-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Cache build output (invalidates on source change)
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: build-${{ runner.os }}-${{ hashFiles('test.js', 'package.json') }}
+          restore-keys: |
+            build-${{ runner.os }}-
+
+      - name: Build
         run: |
-          if [ "${{ steps.cache-modules.outputs.cache-hit }}" = "true" ]; then
-            echo "Exact cache hit - skipping npm ci"
+          mkdir -p dist
+          if [ -f dist/build.txt ]; then
+            echo "Build cache hit - skipping rebuild"
           else
-            echo "Partial or no cache - running npm ci to reconcile"
-            npm ci
+            echo "Building..."
+            node test.js > dist/build.txt
           fi
 
       - run: npm test
